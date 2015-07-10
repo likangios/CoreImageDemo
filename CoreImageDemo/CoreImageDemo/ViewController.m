@@ -17,6 +17,8 @@
 
 @property (nonatomic,strong) UIImageView *ImageView;
 
+@property (nonatomic,strong) UIImage *originalImage;
+
 @property (nonatomic,strong) CIImage *image;
 
 @property (nonatomic,strong) CIImage *outputImage;
@@ -56,7 +58,19 @@
     CGFloat height = [UIScreen mainScreen].bounds.size.height;
     CGFloat width = [UIScreen mainScreen].bounds.size.width;
     CGFloat leftSide = 50;
-    
+
+    NSArray *tit = @[@"原图",@"自动改善"];
+    for (int i = 0; i<2; i++) {
+        UIButton *but= [UIButton buttonWithType:UIButtonTypeCustom];
+        but.frame = CGRectMake(50+i*120, height-200, 100, 40);
+        [but setTitle:tit[i] forState:UIControlStateNormal];
+        [but setBackgroundColor:[UIColor purpleColor]];
+        [but setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        but.titleLabel.adjustsFontSizeToFitWidth = YES;
+        but.tag = 1<<i;
+        [but addTarget:self action:@selector(butClick:) forControlEvents:UIControlEventTouchUpInside];
+        [self.view addSubview:but];
+    }
     
 
     UISlider *slider = [[UISlider alloc]initWithFrame:CGRectMake(leftSide, height-150, width-leftSide-10, 20)];
@@ -95,6 +109,7 @@
     slider3.value = 1;
     [self.view addSubview:slider3];
     
+
     UILabel *label3 = [[UILabel alloc]initWithFrame:CGRectMake(0, CGRectGetMinY(slider3.frame), leftSide, CGRectGetHeight(slider3.frame))];
     label3.textAlignment = NSTextAlignmentCenter;
         label3.adjustsFontSizeToFitWidth = YES;
@@ -105,8 +120,34 @@
     
     _colorControlsFilter = [CIFilter filterWithName:@"CIColorControls"];
     
-    
     // Do any additional setup after loading the view, typically from a nib.
+}
+- (void)butClick:(UIButton *)but{
+    if (but.tag == 1) {
+//  原图
+        _ImageView.image = _originalImage;
+
+    }else{
+//  自动改善
+        
+        CIImage *inputImage = [CIImage imageWithCGImage:_originalImage.CGImage];
+        
+        NSArray *filters =  inputImage.autoAdjustmentFilters;
+        
+        for (CIFilter *filter in filters) {
+            
+            [filter setValue:inputImage forKey:kCIInputImageKey];
+            
+            inputImage = filter.outputImage;
+        }
+        UIImage *image = [UIImage imageWithCIImage:inputImage];
+        
+        NSLog(@"output image.size %f %f",image.size.width,image.size.height);
+        _ImageView.image = image;
+        _ImageView.contentMode = UIViewContentModeScaleAspectFit;
+        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
+        
+    }
 }
 - (void)back{
     
@@ -207,8 +248,8 @@
     
 //    img = [UIImage imageWithCGImage:img.CGImage scale:1 orientation:img.imageOrientation];
     
-    NSLog(@"img.imageOrientation -- %d",img.imageOrientation);
-    
+    NSLog(@"img.imageOrientation -- %ld",(long)img.imageOrientation);
+    _originalImage = img;
     _orientation = img.imageOrientation;
     NSLog(@"image.size %f %f",img.size.width,img.size.height);
     
