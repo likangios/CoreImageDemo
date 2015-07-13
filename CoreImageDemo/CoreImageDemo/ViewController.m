@@ -19,13 +19,16 @@
 
 @property (nonatomic,strong) UIImage *originalImage;
 
-@property (nonatomic,strong) CIImage *image;
+//@property (nonatomic,strong) CIImage *image;
 
 @property (nonatomic,strong) CIImage *outputImage;
 
 @property (nonatomic,strong) CIContext *content;//上下文本
 
 @property (nonatomic,strong) CIFilter *colorControlsFilter;//色彩滤镜
+
+@property (nonatomic,strong) CIFilter *filter;
+
 @end
 
 @implementation ViewController
@@ -51,9 +54,30 @@
     
     self.navigationController.hidesBarsOnTap = YES;
     
-    _ImageView = [[UIImageView alloc]initWithFrame:self.view.bounds];
+    
+    _ImageView = [[UIImageView alloc]initWithFrame:CGRectMake(40, 80, self.view.frame.size.width-80, 300)];
     _ImageView.contentMode = UIViewContentModeScaleAspectFit;
     [self.view addSubview:_ImageView];
+    
+    NSArray *array = @[@"怀旧",@"黑白",@"色调",@"岁月",@"单色",@"褪色",@"冲印",@"铬黄",];
+    CGFloat butW = self.view.frame.size.width/array.count;
+    CGFloat butH = 30.0;
+    for (int i = 0; i<array.count; i++) {
+        
+        UIButton *but = [UIButton buttonWithType:UIButtonTypeRoundedRect];
+        but.center = CGPointMake(butW/2.0+i*butW, CGRectGetMaxY(_ImageView.frame)+20);
+        but.bounds = CGRectMake(0, 0, butW-4, butH);
+        [but setTitle:array[i] forState:UIControlStateNormal];
+        but.titleLabel.adjustsFontSizeToFitWidth = YES;
+        but.layer.cornerRadius =butH/2.0;
+        but.tag = i+1;
+        but.layer.borderColor = [UIColor blueColor].CGColor;
+        [but addTarget:self action:@selector(butsClick:) forControlEvents:UIControlEventTouchUpInside];
+        but.layer.borderWidth = 1.0;
+        [self.view addSubview:but];
+        
+    }
+    
     
     CGFloat height = [UIScreen mainScreen].bounds.size.height;
     CGFloat width = [UIScreen mainScreen].bounds.size.width;
@@ -122,11 +146,32 @@
     
     // Do any additional setup after loading the view, typically from a nib.
 }
+- (void)butsClick:(UIButton *)but{
+    
+    NSArray *filternames = @[@"CIPhotoEffectInstant",@"CIPhotoEffectNoir",@"CIPhotoEffectTonal",@"CIPhotoEffectTransfer",@"CIPhotoEffectMono",@"CIPhotoEffectFade",@"CIPhotoEffectProcess",@"CIPhotoEffectChrome",];
+    
+    _filter = [CIFilter filterWithName:filternames[but.tag-1]];
+    
+    [self outPutImage];
+    
+}
+- (void)outPutImage{
+    CIImage *inputimage = [CIImage imageWithCGImage:_originalImage.CGImage];
+    
+    [_filter setValue:inputimage forKey:kCIInputImageKey];
+    
+    CIImage *outciimage  =  _filter.outputImage;
+    
+  CGImageRef imageref =   [_content createCGImage:outciimage fromRect:outciimage.extent];
+    
+    _ImageView.image = [UIImage imageWithCGImage:imageref];
+}
 - (void)butClick:(UIButton *)but{
     if (but.tag == 1) {
 //  原图
         _ImageView.image = _originalImage;
 
+        
     }else{
 //  自动改善
         
@@ -140,16 +185,28 @@
             
             inputImage = filter.outputImage;
         }
-        UIImage *image = [UIImage imageWithCIImage:inputImage];
+
+        
+    CIContext *context = [CIContext  contextWithOptions:nil];
+
+    CGImageRef cgimg = [context createCGImage:inputImage fromRect:inputImage.extent];
+        
+        UIImage *image = [UIImage imageWithCGImage:cgimg
+                          ];
         
         NSLog(@"output image.size %f %f",image.size.width,image.size.height);
         _ImageView.image = image;
-        _ImageView.contentMode = UIViewContentModeScaleAspectFit;
+        
         UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);
         
     }
 }
+
 - (void)back{
+    
+    CIImage *img=  [CIImage imageWithCGImage:_originalImage.CGImage];
+    
+    [_colorControlsFilter setValue:img forKey:@"inputImage"];
     
     UISlider *slier = (UISlider *)[self.view viewWithTag:11];
     slier.value = 1;
@@ -165,6 +222,8 @@
 
 }
 - (void)autoDeal{
+    CIImage *img=  [CIImage imageWithCGImage:_originalImage.CGImage];
+    [_colorControlsFilter setValue:img forKey:@"inputImage"];
     
     UISlider *slier = (UISlider *)[self.view viewWithTag:11];
     slier.value = 1.4;
@@ -190,8 +249,6 @@
     
     UIImage *img = [UIImage imageWithCGImage:temp];
     
-    
-    
     UIImage *image = [UIImage imageWithCGImage:temp scale:1 orientation:_orientation];
     
     NSLog(@"image.size %f %f %d",image.size.width,image.size.height,image.imageOrientation);
@@ -204,16 +261,31 @@
     
     NSLog(@"饱和度 %f",slider.value);
     
+    dispatch_async(dis, <#^(void)block#>)
+    CIImage *img=  [CIImage imageWithCGImage:_originalImage.CGImage];
+    
+    [_colorControlsFilter setValue:img forKey:@"inputImage"];
+    
     [_colorControlsFilter setValue:[NSNumber numberWithFloat:slider.value] forKey:@"inputSaturation"];
+    
     [self setImage];
 }
 - (void)slider2:(UISlider *)slider{
     NSLog(@"亮度 %f",slider.value);
+    CIImage *img=  [CIImage imageWithCGImage:_originalImage.CGImage];
+    
+    [_colorControlsFilter setValue:img forKey:@"inputImage"];
+    
     [_colorControlsFilter setValue:[NSNumber numberWithFloat:slider.value] forKey:@"inputBrightness"];
         [self setImage];
 }
 - (void)slider3:(UISlider *)slider{
+    
      NSLog(@"对比度 %f",slider.value);
+    CIImage *img=  [CIImage imageWithCGImage:_originalImage.CGImage];
+    
+    [_colorControlsFilter setValue:img forKey:@"inputImage"];
+    
     [_colorControlsFilter setValue:[NSNumber numberWithFloat:slider.value] forKey:@"inputContrast"];
         [self setImage];
 }
@@ -241,23 +313,12 @@
     [self dismissViewControllerAnimated:YES completion:NULL];
 }
 - (void)imagePickerController:(UIImagePickerController *)picker didFinishPickingMediaWithInfo:(NSDictionary *)info{
-    
     [self dismissViewControllerAnimated:YES completion:NULL];
-    
     UIImage *img = [info objectForKey:UIImagePickerControllerOriginalImage];
-    
-//    img = [UIImage imageWithCGImage:img.CGImage scale:1 orientation:img.imageOrientation];
-    
-    NSLog(@"img.imageOrientation -- %ld",(long)img.imageOrientation);
     _originalImage = img;
     _orientation = img.imageOrientation;
+    _ImageView.image = _originalImage;
     NSLog(@"image.size %f %f",img.size.width,img.size.height);
-    
-    _ImageView.image = img;
-    
-    _image = [CIImage imageWithCGImage:img.CGImage];
-    
-    [_colorControlsFilter setValue:_image forKey:@"inputImage"];//设置滤镜的输入图片
     
 }
 - (void)didReceiveMemoryWarning {
