@@ -7,6 +7,7 @@
 //
 
 #import "ViewController.h"
+#import "TestViewController.h"
 
 @interface ViewController ()<UIImagePickerControllerDelegate,UINavigationControllerDelegate>
 
@@ -33,9 +34,21 @@
 
 @implementation ViewController
 
+- (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event{
+
+    NSLog(@"event %@",event);
+    NSLog(@"touches %@",touches);
+    
+    TestViewController *test = [[TestViewController alloc]init];
+    
+    [self.navigationController pushViewController:test animated:YES];
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
+    
     self.view.backgroundColor = [UIColor whiteColor];
+    
     
     UIBarButtonItem *autoDeal2 = [[UIBarButtonItem alloc]initWithTitle:@"还原" style:UIBarButtonItemStylePlain target:self action:@selector(back)];
     
@@ -52,7 +65,7 @@
     self.navigationItem.leftBarButtonItem = open;
     
     
-    self.navigationController.hidesBarsOnTap = YES;
+//    self.navigationController.hidesBarsOnTap = YES;
     
     
     _ImageView = [[UIImageView alloc]initWithFrame:CGRectMake(40, 80, self.view.frame.size.width-80, 300)];
@@ -238,37 +251,48 @@
     
     [self setImage];
     
+    
 }
 - (void)setImage{
     
-    CIImage *outputImage = [_colorControlsFilter outputImage];
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        
+        CIImage *outputImage = [_colorControlsFilter outputImage];
+        
+        CGRect outRect = [outputImage extent];
+        
+        CGImageRef temp = [_content createCGImage:outputImage fromRect:outRect];
+        
+        UIImage *image = [UIImage imageWithCGImage:temp scale:1 orientation:_orientation];
+        
+        NSLog(@"image.size %f %f %ld",image.size.width,image.size.height,(long)image.imageOrientation);
+        
+        CGImageRelease(temp);
+
+            dispatch_async(dispatch_get_main_queue(), ^{
+        
+                _ImageView.image = image;
+        
+                });
+    });
     
-    CGRect outRect = [outputImage extent];
     
-    CGImageRef temp = [_content createCGImage:outputImage fromRect:outRect];
     
-    UIImage *img = [UIImage imageWithCGImage:temp];
-    
-    UIImage *image = [UIImage imageWithCGImage:temp scale:1 orientation:_orientation];
-    
-    NSLog(@"image.size %f %f %d",image.size.width,image.size.height,image.imageOrientation);
-    
-    _ImageView.image = image;
-    
-    CGImageRelease(temp);
 }
 - (void)slider:(UISlider *)slider{
     
     NSLog(@"饱和度 %f",slider.value);
     
-    dispatch_async(dis, <#^(void)block#>)
-    CIImage *img=  [CIImage imageWithCGImage:_originalImage.CGImage];
+        CIImage *img=  [CIImage imageWithCGImage:_originalImage.CGImage];
+        
+        [_colorControlsFilter setValue:img forKey:@"inputImage"];
+        
+        [_colorControlsFilter setValue:[NSNumber numberWithFloat:slider.value] forKey:@"inputSaturation"];
+        
+        [self setImage];
+
     
-    [_colorControlsFilter setValue:img forKey:@"inputImage"];
-    
-    [_colorControlsFilter setValue:[NSNumber numberWithFloat:slider.value] forKey:@"inputSaturation"];
-    
-    [self setImage];
+
 }
 - (void)slider2:(UISlider *)slider{
     NSLog(@"亮度 %f",slider.value);
